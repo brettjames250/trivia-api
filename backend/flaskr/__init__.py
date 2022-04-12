@@ -16,17 +16,32 @@ def create_app(test_config=None):
   '''
   @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
   '''
+  CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-  '''
-  @TODO: Use the after_request decorator to set Access-Control-Allow
-  '''
+ 
+  @app.after_request
+  def after_request(response):
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Headers', 'GET, POST, PATCH, DELETE, OPTION')
+    return response
 
   '''
   @TODO: 
   Create an endpoint to handle GET requests 
   for all available categories.
   '''
-
+  @app.route("/categories", methods=['GET'])
+  def get_categories():
+    categories = Category.query.all()
+    formatted_categories = []
+    
+    for category in categories:
+      formatted_categories.append(plant.format())
+      
+    return jsonify({
+      "success": True,
+      "categories": formatted_categories 
+    })
 
   '''
   @TODO: 
@@ -40,6 +55,24 @@ def create_app(test_config=None):
   ten questions per page and pagination at the bottom of the screen for three pages.
   Clicking on the page numbers should update the questions. 
   '''
+  @app.route("/questions", methods=['GET'])
+  def get_categories():
+    # pagination from query parameter 'page'
+    page = request.args.get("page", 1, type=int)
+    start = (page - 1) * 10
+    end = start + 10
+    
+    questions = Question.query.all()
+    formatted_questions = []
+    
+    for question in questions:
+      formatted_questions.append(question.format())
+      
+    return jsonify({
+      "success": True,
+      "questions": formatted_questions[start:end],
+      "totalQuestions": len(formatted_questions) 
+    })
 
   '''
   @TODO: 
@@ -48,6 +81,22 @@ def create_app(test_config=None):
   TEST: When you click the trash icon next to a question, the question will be removed.
   This removal will persist in the database and when you refresh the page. 
   '''
+  @app.route("/questions/<int:question_id>")
+  def delete_question(question_id):
+    try:
+      question = Question.query.get(question_id)
+      
+      if question is None:
+        abort(404)
+        
+      question.delete()
+ 
+      return jsonify({
+        "success": True,
+        "deleted": question_id,
+      })
+    except:
+      abort(422)
 
   '''
   @TODO: 
@@ -59,6 +108,19 @@ def create_app(test_config=None):
   the form will clear and the question will appear at the end of the last page
   of the questions list in the "List" tab.  
   '''
+  @app.route("/questions", methods=["POST"])
+  def create_question():
+    request_data = request.get_json()
+    
+    try:
+      question = Question(question=request_data.get("question"), answer=request_data.get("answer"), category=request_data.get("category"), difficulty=request_data.get("difficulty"))
+      book.insert()
+      
+      return question.format() 
+  
+    except:
+      abort(422)
+    
 
   '''
   @TODO: 
@@ -70,6 +132,11 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
+  @app.route("/questions", methods=["POST"])
+  def search_question():
+    search_term = request.get_json().get("searchTerm")
+    return "blah"
+  
 
   '''
   @TODO: 
@@ -98,6 +165,22 @@ def create_app(test_config=None):
   Create error handlers for all expected errors 
   including 404 and 422. 
   '''
+  @app.errorhandler(404)
+  def not_found(error):
+    return jsonify({
+        "success": False, 
+        "error": 404,
+        "message": "Not found"
+        }), 404
+   
+    
+  @app.errorhandler(422)
+  def unprocessable_entity(error):
+    return jsonify({
+        "success": False, 
+        "error": 422,
+        "message": "Unprocessable entity"
+        }), 422
   
   return app
 
