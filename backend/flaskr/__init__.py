@@ -137,7 +137,21 @@ def create_app(test_config=None):
     def get_questions_by_category(category_id):
         # pagination from query parameter 'page'
 
-        return jsonify({"success": True, "category": category_id})
+        category = Category.query.get(category_id)
+        filtered_questions = Question.query.filter_by(category=category_id).all()
+
+        formatted_questions = []
+
+        for question in filtered_questions:
+            formatted_questions.append(question.format())
+
+        return jsonify(
+            {
+                "questions": formatted_questions,
+                "totalQuestions": len(formatted_questions),
+                "currentCategory": category.type,
+            }
+        )
 
     """
   @TODO: 
