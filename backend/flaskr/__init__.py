@@ -29,12 +29,12 @@ def create_app(test_config=None):
     @app.route("/categories", methods=["GET"])
     def get_categories():
         categories = Category.query.all()
-        formatted_categories = []
+        formatted_categories = {}
 
         for category in categories:
-            formatted_categories.append(category.format())
+            formatted_categories[category.id] = category.type
 
-        return jsonify({"success": True, "categories": formatted_categories})
+        return jsonify({"categories": formatted_categories})
 
     """
   @TODO: 
@@ -62,22 +62,35 @@ def create_app(test_config=None):
         for question in questions:
             formatted_questions.append(question.format())
 
+        categories = Category.query.all()
+        formatted_categories = {}
+
+        paginated_questions = formatted_questions[start:end]
+
+        if len(paginated_questions) == 0:
+            abort(404)
+
+        for category in categories:
+            formatted_categories[category.id] = category.type
+
         return jsonify(
             {
-                "success": True,
-                "questions": formatted_questions[start:end],
-                "totalQuestions": len(formatted_questions),
+                "questions": paginated_questions,
+                "totalQuestions": len(questions),
+                "categories": formatted_categories,
+                "currentCategory": None,
             }
         )
 
     @app.route("/questions/<int:question_id>", methods=["DELETE"])
     def delete_question(question_id):
+
+        question = Question.query.get(question_id)
+
+        if question is None:
+            abort(404)
+
         try:
-            question = Question.query.get(question_id)
-
-            if question is None:
-                abort(404)
-
             question.delete()
 
             return jsonify(
@@ -90,48 +103,41 @@ def create_app(test_config=None):
             abort(422)
 
     @app.route("/questions", methods=["POST"])
-    def create_question():
+    def questions_endpoint():
         request_data = request.get_json()
 
-        try:
-            question = Question(
-                question=request_data.get("question"),
-                answer=request_data.get("answer"),
-                category=request_data.get("category"),
-                difficulty=request_data.get("difficulty"),
+        if request_data.get("searchTerm") is None:
+
+            try:
+                question = Question(
+                    question=request_data.get("question"),
+                    answer=request_data.get("answer"),
+                    category=request_data.get("category"),
+                    difficulty=request_data.get("difficulty"),
+                )
+                question.insert()
+
+                # Not actually ment to return any data??
+                return jsonify(question.format())
+
+            except:
+                abort(422)
+        else:
+            search_term = request.get_json().get("searchTerm")
+            questions_found = Question.query.filter(
+                Question.question.ilike(f"%{search_term}%")
             )
-            question.insert()
-
-            # Not actually ment to return ny data??
-            return jsonify(question.format())
-
-        except:
-            abort(422)
-
-    """
-  @TODO: 
-  Create a POST endpoint to get questions based on a search term. 
-  It should return any questions for whom the search term 
-  is a substring of the question. 
-
-  TEST: Search by any phrase. The questions list will update to include 
-  only question that include that string within their question. 
-  Try using the word "title" to start. 
-  """
-
-    @app.route("/questions", methods=["POST"])
-    def search_question():
-        search_term = request.get_json().get("searchTerm")
-        return "blah"
-
-    """
-  @TODO: 
-  Create a GET endpoint to get questions based on category. 
-
-  TEST: In the "List" tab / main screen, clicking on one of the 
-  categories in the left column will cause only questions of that 
-  category to be shown. 
-  """
+            formatted_questions = []
+            for question in questions_found:
+                formatted_questions.append(question.format())
+            return jsonify(
+                {
+                    "questions": formatted_questions,
+                    "totalQuestions": len(formatted_questions),
+                    # Not sure what to do here
+                    "currentCategory": None,
+                }
+            )
 
     @app.route("/categories/<int:category_id>/questions", methods=["GET"])
     def get_questions_by_category(category_id):
@@ -153,17 +159,24 @@ def create_app(test_config=None):
             }
         )
 
-    """
-  @TODO: 
-  Create a POST endpoint to get questions to play the quiz. 
-  This endpoint should take category and previous question parameters 
-  and return a random questions within the given category, 
-  if provided, and that is not one of the previous questions. 
+    @app.route("/quizzes", methods=["POST"])
+    def get_next_question():
+        prev_questions = request.get_json().get("previous_questions")
+        category = request.get_json().get("quiz_category")
 
-  TEST: In the "Play" tab, after a user selects "All" or a category,
-  one question at a time is displayed, the user is allowed to answer
-  and shown whether they were correct or not. 
-  """
+        filtered_questions = Question.query.filter_by(category=category.get("id")).all()
+
+        print()
+
+        possible_next_questions = []
+
+        for question in filtered_questions:
+            if question.id not in prev_questions:
+                possible_next_questions.append(question)
+                # break loop when found question
+                break
+
+        return jsonify({"question": possible_next_questions[0].format()})
 
     @app.errorhandler(404)
     def not_found(error):
