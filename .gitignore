@@ -15,4 +15,3 @@ ehthumbs.db
 Thumbs.db
 
 **/node_modules
-/frontend/package-lock.json

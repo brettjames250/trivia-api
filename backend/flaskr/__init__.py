@@ -22,7 +22,7 @@ def create_app(test_config=None):
             "Access-Control-Allow-Headers", "Content-Type, Authorization"
         )
         response.headers.add(
-            "Access-Control-Allow-Headers", "GET, POST, PATCH, DELETE, OPTION"
+            "Access-Control-Allow-Headers", "GET, POST, DELETE, OPTION"
         )
         return response
 
@@ -105,39 +105,39 @@ def create_app(test_config=None):
     @app.route("/questions", methods=["POST"])
     def questions_endpoint():
         request_data = request.get_json()
-
-        if request_data.get("searchTerm") is None:
-
-            try:
-                question = Question(
-                    question=request_data.get("question"),
-                    answer=request_data.get("answer"),
-                    category=request_data.get("category"),
-                    difficulty=request_data.get("difficulty"),
-                )
-                question.insert()
-
-                # Not actually ment to return any data??
-                return jsonify(question.format())
-
-            except:
-                abort(422)
-        else:
-            search_term = request.get_json().get("searchTerm")
-            questions_found = Question.query.filter(
-                Question.question.ilike(f"%{search_term}%")
+        try:
+            question = Question(
+                question=request_data.get("question"),
+                answer=request_data.get("answer"),
+                category=request_data.get("category"),
+                difficulty=request_data.get("difficulty"),
             )
-            formatted_questions = []
-            for question in questions_found:
-                formatted_questions.append(question.format())
-            return jsonify(
-                {
-                    "questions": formatted_questions,
-                    "totalQuestions": len(formatted_questions),
-                    # Not sure what to do here
-                    "currentCategory": None,
-                }
-            )
+            question.insert()
+
+            # Not actually ment to return any data??
+            return jsonify(question.format())
+        except:
+            abort(422)
+
+    @app.route("/questions/search", methods=["POST"])
+    def search_questions():
+        search_term = request.get_json().get("searchTerm")
+        questions_found = Question.query.filter(
+            Question.question.ilike(f"%{search_term}%")
+        )
+        formatted_questions = []
+
+        for question in questions_found:
+            formatted_questions.append(question.format())
+
+        return jsonify(
+            {
+                "questions": formatted_questions,
+                "totalQuestions": len(formatted_questions),
+                # Not sure what to do here
+                "currentCategory": None,
+            }
+        )
 
     @app.route("/categories/<int:category_id>/questions", methods=["GET"])
     def get_questions_by_category(category_id):

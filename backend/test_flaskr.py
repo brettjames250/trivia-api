@@ -32,6 +32,10 @@ class TriviaTestCase(unittest.TestCase):
             "difficulty": 4,
         }
 
+        self.search_test = {"searchTerm": "title"}
+
+        self.search_test_no_results = {"searchTerm": "no results"}
+
         # binds the app to the current context
         with self.app.app_context():
             self.db = SQLAlchemy()
@@ -86,7 +90,22 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_404_if_question_does_not_exist(self):
         res = self.client().delete("/questions/9999")
+
         self.assertEqual(res.status_code, 404)
+
+    def test_question_search(self):
+        res = self.client().post("/questions/search", json=self.search_test)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(data["questions"]), 2)
+
+    def test_question_search_without_results(self):
+        res = self.client().post("/questions/search", json=self.search_test_no_results)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(data["questions"]), 0)
 
 
 # Make the tests conveniently executable
