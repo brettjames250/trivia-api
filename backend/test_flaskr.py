@@ -36,6 +36,11 @@ class TriviaTestCase(unittest.TestCase):
 
         self.search_test_no_results = {"searchTerm": "no results"}
 
+        self.get_next_question = {
+            "previous_questions": [20, 21],
+            "quiz_category": {"type": "Art", "id": "2"},
+        }
+
         # binds the app to the current context
         with self.app.app_context():
             self.db = SQLAlchemy()
@@ -106,6 +111,13 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(data["questions"]), 0)
+
+    def test_get_next_question(self):
+        res = self.client().post("/quizzes", json=self.get_next_question)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data["question"].get("id"), 16)
 
 
 # Make the tests conveniently executable

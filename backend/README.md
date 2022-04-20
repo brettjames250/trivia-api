@@ -285,7 +285,7 @@ Example response
 #### GET /categories/{id}/questions
 
 General
-- Returns a list of categories
+- Returns a list of questions that share the same quiz category, based upon the category ID specified.
 
 Sample
 
